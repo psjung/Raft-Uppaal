@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+const int N=5;
+int[0,N] requester;
+
+int[0,10] globalTerm;
+int[0,10] heartbeatTerm;
+
+broadcast chan requestVote;
+broadcast chan heartbeat;
+
+
+int[0,N] votes[N];</declaration>
+	<template>
+		<name x="5" y="5">CandidateNode</name>
+		<parameter>int[0,5] id</parameter>
+		<declaration>// Place local declarations here.
+clock electionClock;
+clock heartbeatClock;
+int term;</declaration>
+		<location id="id0" x="561" y="153">
+			<name x="527" y="119">Follower</name>
+		</location>
+		<location id="id1" x="918" y="153">
+			<name x="893" y="119">Candidate</name>
+		</location>
+		<location id="id2" x="1156" y="153">
+			<name x="1130" y="119">Leader</name>
+			<label kind="invariant" x="1104" y="102">heartbeatClock&lt;=1</label>
+		</location>
+		<location id="id3" x="1309" y="153">
+			<committed/>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="1190" y="195">heartbeat!</label>
+			<label kind="assignment" x="1190" y="212">heartbeatClock:=0</label>
+			<nail x="1232" y="195"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="1173" y="59">heartbeatClock&gt;=1</label>
+			<label kind="assignment" x="1173" y="76">heartbeatTerm=term</label>
+			<nail x="1224" y="102"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id0"/>
+			<label kind="guard" x="816" y="280">term&lt;heartbeatTerm</label>
+			<label kind="synchronisation" x="816" y="297">heartbeat?</label>
+			<label kind="assignment" x="816" y="314">electionClock:=0</label>
+			<nail x="884" y="331"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id1"/>
+			<label kind="select" x="875" y="-59">rand:int[2,4]</label>
+			<label kind="guard" x="875" y="-42">electionClock&gt;=rand</label>
+			<label kind="synchronisation" x="874" y="-25">requestVote!</label>
+			<label kind="assignment" x="874" y="-8">requester=id,
+globalTerm=(++globalTerm%10),
+term=globalTerm,
+votes[id]:=1,
+electionClock:=0</label>
+			<nail x="858" y="25"/>
+			<nail x="994" y="25"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="875" y="212">requestVote?</label>
+			<label kind="assignment" x="858" y="238">votes[requester]++</label>
+			<nail x="867" y="238"/>
+			<nail x="960" y="238"/>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="527" y="34">heartbeat?</label>
+			<label kind="assignment" x="518" y="59">electionClock:=0</label>
+			<nail x="510" y="59"/>
+			<nail x="621" y="59"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="739" y="170">heartbeat?</label>
+			<label kind="assignment" x="739" y="187">electionClock:=0,
+votes[id]:=0</label>
+			<nail x="756" y="195"/>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="select" x="646" y="-9">rand:int[2,4]</label>
+			<label kind="guard" x="646" y="8">electionClock&gt;=rand</label>
+			<label kind="synchronisation" x="646" y="25">requestVote!</label>
+			<label kind="assignment" x="646" y="42">requester=id,
+globalTerm=(++globalTerm%10),
+term=globalTerm,
+votes[id]++,
+electionClock:=0</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="518" y="204">requestVote?</label>
+			<label kind="assignment" x="501" y="229">votes[requester]++</label>
+			<nail x="510" y="230"/>
+			<nail x="603" y="230"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="960" y="102">votes[id]&gt;=2/N+1</label>
+			<label kind="assignment" x="960" y="128">heartbeatTerm=term,
+votes[id]:=0,
+heartbeatClock:=0</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+node1 := CandidateNode(0);
+node2 := CandidateNode(1);
+node3 := CandidateNode(2);
+node4 := CandidateNode(3);
+node5 := CandidateNode(4);
+
+
+// List one or more processes to be composed into a system.
+system node1, node2, node3, node4, node5;</system>
+	<queries>
+		<query>
+			<formula>E&lt;&gt; node1.Leader and node2.Leader and node3.Leader</formula>
+			<comment>모든 candidate 노드가 동시에 delegate 노드가 되는 순간이 있다.</comment>
+		</query>
+		<query>
+			<formula>A&lt;&gt; node1.Candidate imply node1.Leader</formula>
+			<comment>candidate 노드는 delegate 노드가 될 수 있다.</comment>
+		</query>
+		<query>
+			<formula>A[] not deadlock</formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>
